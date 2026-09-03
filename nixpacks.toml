@@ -2,7 +2,7 @@
 nixPkgs = ["nodejs_22", "ffmpeg"]
 
 [phases.install]
-cmds = ["npm install --production --no-audit --no-fund"]
+cmds = ["corepack pnpm install --prod --no-frozen-lockfile"]
 
 [start]
 cmd = "npm start"
