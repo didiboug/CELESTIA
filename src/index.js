@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
 const { DisTube } = require('distube');
-const { YtDlpPlugin } = require('@distube/yt-dlp');
+const { YouTubePlugin } = require('@distube/youtube');
 const config = require('./config');
 const commandHandler = require('./handlers/commandHandler');
 const eventHandler = require('./handlers/eventHandler');
@@ -44,11 +44,7 @@ client.ticketMap  = new Collection(); // Tickets actifs
 client.distube = new DisTube(client, {
   emitNewSongOnly: false,
   joinNewVoiceChannel: true,
-  plugins: [new YtDlpPlugin({
-    update: false,
-    ytdlpPath: process.env.YTDLP_PATH || 'yt-dlp',
-    ytdlpArgs: { youtube: ['--js-runtimes', 'node'] },
-  })],
+  plugins: [new YouTubePlugin()],
 });
 
 // Événements DisTube
