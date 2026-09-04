@@ -1,5 +1,16 @@
 const { ActivityType } = require('discord.js');
 
+function updateMemberStatus(client) {
+  const memberCount = client.guilds.cache.reduce(
+    (total, guild) => total + guild.memberCount,
+    0
+  );
+
+  client.user.setActivity(`${memberCount} membres`, {
+    type: ActivityType.Watching,
+  });
+}
+
 module.exports = {
   name: 'ready',
   once: true,
@@ -8,21 +19,8 @@ module.exports = {
     console.log(`📊 Présent sur ${client.guilds.cache.size} serveur(s)`);
     console.log(`👥 ${client.users.cache.size} utilisateurs en cache`);
 
-    // Statut du bot (rotation toutes les 30 secondes)
-    const statuses = [
-      { name: '+help | Bot Communauté', type: ActivityType.Playing },
-      { name: `${client.guilds.cache.size} serveurs`, type: ActivityType.Watching },
-      { name: `${client.users.cache.size} membres`, type: ActivityType.Watching },
-      { name: 'votre serveur 🛡️', type: ActivityType.Watching },
-    ];
-
-    let i = 0;
-    const setStatus = () => {
-      client.user.setActivity(statuses[i % statuses.length]);
-      i++;
-    };
-
-    setStatus();
-    setInterval(setStatus, 30000);
+    // Compteur de membres visible et actualisé automatiquement
+    updateMemberStatus(client);
+    setInterval(() => updateMemberStatus(client), 10000);
   },
 };
