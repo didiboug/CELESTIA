@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { errorEmbed } = require('../../utils/embed');
 const Giveaway = require('../../models/Giveaway');
 
@@ -52,8 +52,8 @@ module.exports = {
         [
           `## ${prize}`,
           '',
-          'Clique sur la réaction **🎉** sous ce message pour participer.',
-          'Retire ta réaction pour annuler ta participation.',
+          'Clique sur le bouton **Participer** ou ajoute la réaction **🎉**.',
+          'Clique une seconde fois ou retire ta réaction pour annuler.',
         ].join('\n')
       )
       .addFields(
@@ -81,6 +81,13 @@ module.exports = {
     });
 
     await gMsg.react('🎉');
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`giveaway_join_${gMsg.id}`)
+        .setLabel('🎉 Participer (0)')
+        .setStyle(ButtonStyle.Primary)
+    );
+    await gMsg.edit({ components: [row] });
     await message.reply({ content: `✅ Giveaway lancé dans ${message.channel} !` }).then(m => setTimeout(() => m.delete().catch(() => {}), 5000));
   },
 };

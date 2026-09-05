@@ -260,14 +260,42 @@ async function handleTicketClose(interaction, client) {
 async function handleGiveawayJoin(interaction, messageId) {
   await interaction.deferReply({ ephemeral: true });
 
+  const giveaway = await Giveaway.findOne({ messageId });
+  if (!giveaway || giveaway.ended) {
+    return interaction.editReply({ content: '❌ Ce giveaway est terminé.' });
+  }
+
+  giveaway.participants = Array.isArray(giveaway.participants) ? giveaway.participants : [];
+  const isParticipating = giveaway.participants.includes(interaction.user.id);
+
+  if (isParticipating) {
+    giveaway.participants = giveaway.participants.filter(id => id !== interaction.user.id);
+  } else {
+    giveaway.participants.push(interaction.user.id);
+  }
+  await giveaway.save();
+
   const message = await interaction.channel.messages.fetch(messageId).catch(() => null);
   if (message) {
-    await message.edit({ components: [] }).catch(() => {});
-    await message.react('🎉').catch(() => {});
+    if (isParticipating) {
+      const giveawayReaction = message.reactions.cache.find(reaction => reaction.emoji.name === '🎉');
+      await giveawayReaction?.users.remove(interaction.user.id).catch(() => {});
+    }
+
+    const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`giveaway_join_${messageId}`)
+        .setLabel(`🎉 Participer (${giveaway.participants.length})`)
+        .setStyle(ButtonStyle.Primary)
+    );
+    await message.edit({ components: [row] }).catch(() => {});
   }
 
   await interaction.editReply({
-    content: '🎉 Le bouton a été remplacé. Clique sur la réaction **🎉** sous le giveaway pour participer.',
+    content: isParticipating
+      ? '❌ Ta participation a été retirée.'
+      : `✅ Tu participes au giveaway **${giveaway.prize}** ! 🎉`,
   });
 }
 
