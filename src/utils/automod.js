@@ -1,5 +1,6 @@
 const { PermissionFlagsBits } = require('discord.js');
 const Guild = require('../models/Guild');
+const { findLogChannel } = require('./logChannel');
 const { modLogEmbed } = require('./embed');
 
 // Mots interdits par défaut (à personnaliser)
@@ -129,10 +130,11 @@ async function handleAntiAlt(member) {
 
 // ─── Envoi log de modération ──────────────────────
 async function sendModLog(guild, guildData, action, moderator, target, reason) {
-  const logChannelId = guildData?.logs?.modLogs || guildData?.logs?.channelId;
-  if (!logChannelId) return;
-
-  const logChannel = guild.channels.cache.get(logChannelId);
+  const logChannel = findLogChannel(
+    guild,
+    guildData?.logs?.modLogs || guildData?.logs?.channelId,
+    ['mod-logs', 'moderation-logs']
+  );
   if (!logChannel) return;
 
   await logChannel.send({ embeds: [modLogEmbed(action, moderator, target, reason)] }).catch(() => {});

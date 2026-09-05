@@ -3,6 +3,7 @@ const Guild = require('../models/Guild');
 const Ticket = require('../models/Ticket');
 const Giveaway = require('../models/Giveaway');
 const User = require('../models/User');
+const { findLogChannel } = require('../utils/logChannel');
 
 module.exports = {
   name: 'interactionCreate',
@@ -193,7 +194,11 @@ async function createTicket(interaction, category, client) {
 
   await interaction.editReply({ content: `✅ Ticket créé : ${ticketChannel}` });
 
-  const logChannel = interaction.guild.channels.cache.get(guildData.tickets.logChannelId);
+  const logChannel = findLogChannel(
+    interaction.guild,
+    guildData.tickets.logChannelId,
+    ['ticket-logs', 'tickets-logs']
+  );
   if (logChannel) {
     const logEmbed = new EmbedBuilder()
       .setColor('#57F287')
@@ -227,7 +232,11 @@ async function handleTicketClose(interaction, client) {
   await ticket.save();
 
   const guildData = await Guild.findOne({ guildId: interaction.guild.id });
-  const logChannel = interaction.guild.channels.cache.get(guildData?.tickets?.logChannelId);
+  const logChannel = findLogChannel(
+    interaction.guild,
+    guildData?.tickets?.logChannelId,
+    ['ticket-logs', 'tickets-logs']
+  );
   if (logChannel) {
     const logEmbed = new EmbedBuilder()
       .setColor('#ED4245')

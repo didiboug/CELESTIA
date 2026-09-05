@@ -1,5 +1,6 @@
 const { EmbedBuilder, AuditLogEvent } = require('discord.js');
 const Guild = require('../models/Guild');
+const { findLogChannel } = require('../utils/logChannel');
 
 module.exports = {
   name: 'guildMemberUpdate',
@@ -7,16 +8,17 @@ module.exports = {
     if (!client.dbConnected) return;
 
     const guildData = await Guild.findOne({ guildId: newMember.guild.id }).catch(() => null);
-    if (!guildData) return;
 
     // ── BOOST LOGS ───────────────────────────────────
-    const boostChannelId = guildData?.logs?.boostLogs;
+    const boostChannel = findLogChannel(
+      newMember.guild,
+      guildData?.logs?.boostLogs,
+      ['boost-logs']
+    );
     const wasBoost = oldMember.premiumSince === null && newMember.premiumSince !== null;
     const lostBoost = oldMember.premiumSince !== null && newMember.premiumSince === null;
 
-    if (boostChannelId && (wasBoost || lostBoost)) {
-      const boostChannel = newMember.guild.channels.cache.get(boostChannelId);
-      if (boostChannel) {
+    if (boostChannel && (wasBoost || lostBoost)) {
         const embed = new EmbedBuilder()
           .setColor(wasBoost ? '#FF73FA' : '#747F8D')
           .setTitle(wasBoost ? '🚀 Nouveau boost !' : '💨 Boost retiré')
@@ -26,12 +28,15 @@ module.exports = {
           .setThumbnail(newMember.user.displayAvatarURL({ dynamic: true }))
           .setTimestamp();
         boostChannel.send({ embeds: [embed] }).catch(() => {});
-      }
     }
 
     // ── RÔLE LOGS ────────────────────────────────────
-    const roleChannelId = guildData?.logs?.roleLogs;
-    if (!roleChannelId) return;
+    const roleChannel = findLogChannel(
+      newMember.guild,
+      guildData?.logs?.roleLogs,
+      ['rôle-logs', 'role-logs']
+    );
+    if (!roleChannel) return;
 
     const oldRoles = oldMember.roles.cache;
     const newRoles = newMember.roles.cache;
@@ -40,9 +45,6 @@ module.exports = {
     const removed = oldRoles.filter(r => !newRoles.has(r.id));
 
     if (added.size === 0 && removed.size === 0) return;
-
-    const roleChannel = newMember.guild.channels.cache.get(roleChannelId);
-    if (!roleChannel) return;
 
     // Audit log pour savoir qui a modifié les rôles
     let moderator = null;

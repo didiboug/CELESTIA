@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const Guild = require('../models/Guild');
+const { findLogChannel } = require('../utils/logChannel');
 
 module.exports = {
   name: 'voiceStateUpdate',
@@ -10,10 +11,11 @@ module.exports = {
     if (!member?.user || !guild || member.user.bot) return;
 
     const guildData = await Guild.findOne({ guildId: guild.id }).catch(() => null);
-    const channelId = guildData?.logs?.voiceLogs;
-    if (!channelId) return;
-
-    const logChannel = guild.channels.cache.get(channelId);
+    const logChannel = findLogChannel(
+      guild,
+      guildData?.logs?.voiceLogs,
+      ['voice-logs', 'vocal-logs']
+    );
     if (!logChannel) return;
 
     let title, color, description;
