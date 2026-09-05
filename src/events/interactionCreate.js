@@ -258,43 +258,17 @@ async function handleTicketClose(interaction, client) {
 
 // ─── Rejoindre un giveaway ────────────────────────
 async function handleGiveawayJoin(interaction, messageId) {
-  // Confirmer immédiatement l'interaction pour éviter le délai Discord de 3 secondes.
   await interaction.deferReply({ ephemeral: true });
 
-  const giveaway = await Giveaway.findOne({ messageId });
-  if (!giveaway || giveaway.ended) {
-    return interaction.editReply({ content: '❌ Ce giveaway est terminé.' });
+  const message = await interaction.channel.messages.fetch(messageId).catch(() => null);
+  if (message) {
+    await message.edit({ components: [] }).catch(() => {});
+    await message.react('🎉').catch(() => {});
   }
 
-  giveaway.participants = Array.isArray(giveaway.participants) ? giveaway.participants : [];
-
-  if (giveaway.participants.includes(interaction.user.id)) {
-    // Retrait de la participation
-    giveaway.participants = giveaway.participants.filter(id => id !== interaction.user.id);
-    await giveaway.save();
-    await interaction.editReply({ content: '❌ Tu t\'es retiré du giveaway.' });
-  } else {
-    // Ajout
-    giveaway.participants.push(interaction.user.id);
-    await giveaway.save();
-    await interaction.editReply({ content: `✅ Tu participes au giveaway **${giveaway.prize}** ! 🎉` });
-  }
-
-  // Mettre à jour le message
-  const channel = interaction.guild.channels.cache.get(giveaway.channelId);
-  if (channel) {
-    const msg = await channel.messages.fetch(messageId).catch(() => null);
-    if (msg) {
-      const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`giveaway_join_${messageId}`)
-          .setLabel(`🎉 Participer (${giveaway.participants.length})`)
-          .setStyle(ButtonStyle.Primary)
-      );
-      await msg.edit({ components: [row] }).catch(() => {});
-    }
-  }
+  await interaction.editReply({
+    content: '🎉 Le bouton a été remplacé. Clique sur la réaction **🎉** sous le giveaway pour participer.',
+  });
 }
 
 // ─── Votes suggestions ────────────────────────────
