@@ -88,7 +88,7 @@ commandHandler(client);
 eventHandler(client);
 
 // ─── Schedulers ───────────────────────────────────
-client.once('ready', () => {
+client.once('clientReady', () => {
   startGiveawayScheduler(client);
   startBirthdayScheduler(client);
   startCounterScheduler(client);
