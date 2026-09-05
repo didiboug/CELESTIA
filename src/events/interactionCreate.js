@@ -29,7 +29,15 @@ module.exports = {
 
       // Rejoindre un giveaway
       else if (action === 'giveaway' && rest[0] === 'join') {
-        await handleGiveawayJoin(interaction, rest[1]).catch(console.error);
+        await handleGiveawayJoin(interaction, rest[1]).catch(async error => {
+          console.error('❌ Erreur participation giveaway:', error);
+          const response = { content: '❌ Une erreur est survenue. Réessaie dans quelques secondes.' };
+          if (interaction.deferred || interaction.replied) {
+            await interaction.editReply(response).catch(() => {});
+          } else {
+            await interaction.reply({ ...response, ephemeral: true }).catch(() => {});
+          }
+        });
       }
 
       // Suggestions — vote oui/non
@@ -249,21 +257,26 @@ async function handleTicketClose(interaction, client) {
 
 // ─── Rejoindre un giveaway ────────────────────────
 async function handleGiveawayJoin(interaction, messageId) {
+  // Confirmer immédiatement l'interaction pour éviter le délai Discord de 3 secondes.
+  await interaction.deferReply({ ephemeral: true });
+
   const giveaway = await Giveaway.findOne({ messageId });
   if (!giveaway || giveaway.ended) {
-    return interaction.reply({ content: '❌ Ce giveaway est terminé.', ephemeral: true });
+    return interaction.editReply({ content: '❌ Ce giveaway est terminé.' });
   }
+
+  giveaway.participants = Array.isArray(giveaway.participants) ? giveaway.participants : [];
 
   if (giveaway.participants.includes(interaction.user.id)) {
     // Retrait de la participation
     giveaway.participants = giveaway.participants.filter(id => id !== interaction.user.id);
     await giveaway.save();
-    await interaction.reply({ content: '❌ Tu t\'es retiré du giveaway.', ephemeral: true });
+    await interaction.editReply({ content: '❌ Tu t\'es retiré du giveaway.' });
   } else {
     // Ajout
     giveaway.participants.push(interaction.user.id);
     await giveaway.save();
-    await interaction.reply({ content: `✅ Tu participes au giveaway **${giveaway.prize}** ! 🎉`, ephemeral: true });
+    await interaction.editReply({ content: `✅ Tu participes au giveaway **${giveaway.prize}** ! 🎉` });
   }
 
   // Mettre à jour le message
