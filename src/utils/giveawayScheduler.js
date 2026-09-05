@@ -1,12 +1,38 @@
 const Giveaway = require('../models/Giveaway');
-const { EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder } = require('discord.js');
 
 /**
  * Démarre le scheduler des giveaways (vérifie toutes les 15 secondes)
  */
 function startGiveawayScheduler(client) {
   setInterval(() => checkGiveaways(client), 15000);
+  migrateActiveGiveaways(client).catch(error => {
+    console.error('❌ Migration des giveaways impossible:', error);
+  });
   console.log('🎉 Scheduler giveaway démarré');
+}
+
+async function migrateActiveGiveaways(client) {
+  if (!client.dbConnected) return;
+
+  const activeGiveaways = await Giveaway.find({ ended: false }).catch(() => []);
+  let migrated = 0;
+
+  for (const giveaway of activeGiveaways) {
+    const guild = client.guilds.cache.get(giveaway.guildId);
+    const channel = guild?.channels.cache.get(giveaway.channelId);
+    const message = channel
+      ? await channel.messages.fetch(giveaway.messageId).catch(() => null)
+      : null;
+
+    if (!message) continue;
+
+    await message.edit({ components: [] }).catch(() => {});
+    await message.react('🎉').catch(() => {});
+    migrated++;
+  }
+
+  console.log(`🎉 ${migrated} giveaway(s) actif(s) converti(s) en réactions`);
 }
 
 async function checkGiveaways(client) {
@@ -57,15 +83,7 @@ async function endGiveaway(client, giveaway) {
         .setDescription(`**Gagnant(s) :** ${winnerMentions}\n**Participants :** ${participants.length}\n**Organisé par :** <@${giveaway.hostId}>`)
         .setTimestamp();
 
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`giveaway_join_${giveaway.messageId}`)
-          .setLabel(`🎉 ${participants.length} participants`)
-          .setStyle(ButtonStyle.Secondary)
-          .setDisabled(true)
-      );
-
-      await message.edit({ embeds: [embed], components: [row] }).catch(() => {});
+      await message.edit({ embeds: [embed], components: [] }).catch(() => {});
 
       if (winners.length > 0) {
         await channel.send(`🎉 Félicitations ${winnerMentions} ! Vous avez gagné **${giveaway.prize}** !`);
