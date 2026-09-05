@@ -10,6 +10,7 @@ module.exports = {
 
     // ─── Boutons ──────────────────────────────────
     if (interaction.isButton()) {
+      console.log(`🔘 Bouton reçu: ${interaction.customId} par ${interaction.user.tag}`);
       const [action, ...rest] = interaction.customId.split('_');
 
       // Vérification de membre
