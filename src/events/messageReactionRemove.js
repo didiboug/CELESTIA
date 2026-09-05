@@ -15,7 +15,9 @@ module.exports = {
     if (!giveaway.participants.includes(user.id)) return;
 
     giveaway.participants = giveaway.participants.filter(id => id !== user.id);
-    await giveaway.save();
+    await giveaway.save().catch(error => {
+      console.error('❌ Retrait participation impossible:', error);
+    });
     console.log(`↩️ Participation retirée: ${user.tag} (${giveaway.participants.length})`);
   },
 };

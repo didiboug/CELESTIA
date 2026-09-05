@@ -55,8 +55,21 @@ async function endGiveaway(client, giveaway) {
 
     const message = await channel.messages.fetch(giveaway.messageId).catch(() => null);
 
-    // Sélectionner les gagnants
-    const participants = giveaway.participants || [];
+    // La réaction Discord est la source de vérité, même après un redémarrage.
+    let participants = Array.isArray(giveaway.participants) ? giveaway.participants : [];
+    if (message) {
+      const giveawayReaction = message.reactions.cache.find(reaction => reaction.emoji.name === '🎉');
+      if (giveawayReaction) {
+        const reactedUsers = await giveawayReaction.users.fetch().catch(() => null);
+        if (reactedUsers) {
+          participants = reactedUsers
+            .filter(user => !user.bot)
+            .map(user => user.id);
+        }
+      }
+    }
+
+    giveaway.participants = participants;
     const winnerCount = Math.min(giveaway.winners, participants.length);
     const winners = [];
 
@@ -80,7 +93,12 @@ async function endGiveaway(client, giveaway) {
       const embed = new EmbedBuilder()
         .setColor('#ED4245')
         .setTitle(`🎉 GIVEAWAY TERMINÉ — ${giveaway.prize}`)
-        .setDescription(`**Gagnant(s) :** ${winnerMentions}\n**Participants :** ${participants.length}\n**Organisé par :** <@${giveaway.hostId}>`)
+        .setDescription(
+          `**Gagnant(s) :** ${winnerMentions}\n` +
+          `**Participants :** ${participants.length}\n` +
+          `**Organisé par :** <@${giveaway.hostId}>`
+        )
+        .setFooter({ text: 'Giveaway terminé • Participation par réaction' })
         .setTimestamp();
 
       await message.edit({ embeds: [embed], components: [] }).catch(() => {});

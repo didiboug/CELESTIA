@@ -44,12 +44,25 @@ module.exports = {
     const prize = args.slice(2).join(' ');
     const endsAt = new Date(Date.now() + duration);
 
+    const endTimestamp = Math.floor(endsAt.getTime() / 1000);
     const embed = new EmbedBuilder()
-      .setColor('#FFD700')
-      .setTitle(`🎉 GIVEAWAY — ${prize}`)
-      .setDescription(`Clique sur 🎉 pour participer !\n\n**Lot :** ${prize}\n**Gagnant(s) :** ${winners}\n**Fin :** <t:${Math.floor(endsAt.getTime() / 1000)}:R> (<t:${Math.floor(endsAt.getTime() / 1000)}:F>)`)
-      .addFields({ name: '🎟️ Organisateur', value: `${message.author}`, inline: true })
-      .setFooter({ text: `Durée : ${formatDuration(duration)}` })
+      .setColor('#5865F2')
+      .setTitle('🎉 NOUVEAU GIVEAWAY')
+      .setDescription(
+        [
+          `## ${prize}`,
+          '',
+          'Clique sur la réaction **🎉** sous ce message pour participer.',
+          'Retire ta réaction pour annuler ta participation.',
+        ].join('\n')
+      )
+      .addFields(
+        { name: '🏆 Lot', value: prize, inline: true },
+        { name: '👑 Gagnant(s)', value: String(winners), inline: true },
+        { name: '⏰ Fin', value: `<t:${endTimestamp}:R>\n<t:${endTimestamp}:F>`, inline: false },
+        { name: '🎟️ Organisateur', value: `${message.author}`, inline: true },
+      )
+      .setFooter({ text: `Participation par réaction • Durée : ${formatDuration(duration)}` })
       .setTimestamp(endsAt);
 
     const gMsg = await message.channel.send({ embeds: [embed] });
@@ -62,6 +75,9 @@ module.exports = {
       prize,
       winners,
       endsAt,
+      ended: false,
+      participants: [],
+      winnerIds: [],
     });
 
     await gMsg.react('🎉');

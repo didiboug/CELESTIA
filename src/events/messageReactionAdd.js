@@ -15,7 +15,9 @@ module.exports = {
     if (giveaway.participants.includes(user.id)) return;
 
     giveaway.participants.push(user.id);
-    await giveaway.save();
+    await giveaway.save().catch(error => {
+      console.error('❌ Sauvegarde participation impossible:', error);
+    });
     console.log(`🎉 Participation ajoutée: ${user.tag} (${giveaway.participants.length})`);
   },
 };
