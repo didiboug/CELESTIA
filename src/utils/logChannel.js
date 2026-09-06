@@ -16,4 +16,20 @@ function findLogChannel(guild, configuredId, names) {
   ) || null;
 }
 
-module.exports = { findLogChannel };
+function findLogChannels(guild, configuredId, names, generalConfiguredId) {
+  const specific = findLogChannel(guild, configuredId, names);
+  const general = findLogChannel(guild, generalConfiguredId, ['general-logs']);
+  return [...new Map(
+    [specific, general].filter(Boolean).map(channel => [channel.id, channel])
+  ).values()];
+}
+
+async function sendToLogChannels(channels, payload, label = 'logs') {
+  await Promise.all(channels.map(channel =>
+    channel.send(payload).catch(error => {
+      console.error(`❌ Envoi ${label} impossible dans #${channel.name}: ${error.message}`);
+    })
+  ));
+}
+
+module.exports = { findLogChannel, findLogChannels, sendToLogChannels };

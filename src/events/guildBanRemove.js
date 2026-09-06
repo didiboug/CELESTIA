@@ -1,6 +1,6 @@
 const { EmbedBuilder, AuditLogEvent } = require('discord.js');
 const Guild = require('../models/Guild');
-const { findLogChannel } = require('../utils/logChannel');
+const { findLogChannels, sendToLogChannels } = require('../utils/logChannel');
 
 module.exports = {
   name: 'guildBanRemove',
@@ -8,12 +8,13 @@ module.exports = {
     if (!client.dbConnected) return;
 
     const guildData = await Guild.findOne({ guildId: ban.guild.id }).catch(() => null);
-    const logChannel = findLogChannel(
+    const logChannels = findLogChannels(
       ban.guild,
       guildData?.logs?.modLogs,
-      ['mod-logs', 'moderation-logs']
+      ['mod-logs', 'moderation-logs'],
+      guildData?.logs?.generalLogs
     );
-    if (!logChannel) return;
+    if (!logChannels.length) return;
 
     let moderator = null;
     try {
@@ -34,6 +35,6 @@ module.exports = {
       .setThumbnail(ban.user.displayAvatarURL({ dynamic: true }))
       .setTimestamp();
 
-    logChannel.send({ embeds: [embed] }).catch(() => {});
+    await sendToLogChannels(logChannels, { embeds: [embed] }, 'mod-logs');
   },
 };

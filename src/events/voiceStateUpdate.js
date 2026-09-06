@@ -1,6 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const Guild = require('../models/Guild');
-const { findLogChannel } = require('../utils/logChannel');
+const { findLogChannels, sendToLogChannels } = require('../utils/logChannel');
 
 module.exports = {
   name: 'voiceStateUpdate',
@@ -11,12 +11,13 @@ module.exports = {
     if (!member?.user || !guild || member.user.bot) return;
 
     const guildData = await Guild.findOne({ guildId: guild.id }).catch(() => null);
-    const logChannel = findLogChannel(
+    const logChannels = findLogChannels(
       guild,
       guildData?.logs?.voiceLogs,
-      ['voice-logs', 'vocal-logs']
+      ['voice-logs', 'vocal-logs'],
+      guildData?.logs?.generalLogs
     );
-    if (!logChannel) return;
+    if (!logChannels.length) return;
 
     let title, color, description;
 
@@ -63,8 +64,6 @@ module.exports = {
       .setFooter({ text: `ID : ${member.id}` })
       .setTimestamp();
 
-    logChannel.send({ embeds: [embed] }).catch(error => {
-      console.error(`❌ Envoi voice-logs impossible: ${error.message}`);
-    });
+    await sendToLogChannels(logChannels, { embeds: [embed] }, 'voice-logs');
   },
 };

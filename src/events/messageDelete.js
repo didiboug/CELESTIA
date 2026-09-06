@@ -1,6 +1,6 @@
 const { EmbedBuilder, AuditLogEvent } = require('discord.js');
 const Guild = require('../models/Guild');
-const { findLogChannel } = require('../utils/logChannel');
+const { findLogChannels, sendToLogChannels } = require('../utils/logChannel');
 
 module.exports = {
   name: 'messageDelete',
@@ -10,12 +10,13 @@ module.exports = {
     if (message.author?.bot) return;
 
     const guildData = await Guild.findOne({ guildId: message.guild.id }).catch(() => null);
-    const logChannel = findLogChannel(
+    const logChannels = findLogChannels(
       message.guild,
       guildData?.logs?.msgLogs,
-      ['msg-logs', 'message-logs']
+      ['msg-logs', 'message-logs'],
+      guildData?.logs?.generalLogs
     );
-    if (!logChannel) return;
+    if (!logChannels.length) return;
 
     // Cherche qui a supprimé dans l'audit log
     let deletedBy = null;
@@ -40,8 +41,6 @@ module.exports = {
       .setFooter({ text: `ID message : ${message.id}` })
       .setTimestamp();
 
-    logChannel.send({ embeds: [embed] }).catch(error => {
-      console.error(`❌ Envoi msg-logs impossible: ${error.message}`);
-    });
+    await sendToLogChannels(logChannels, { embeds: [embed] }, 'msg-logs');
   },
 };

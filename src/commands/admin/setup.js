@@ -108,6 +108,7 @@ module.exports = {
           { name: 'rôle-logs',  key: 'roleLogs' },
           { name: 'voice-logs', key: 'voiceLogs' },
           { name: 'boost-logs', key: 'boostLogs' },
+          { name: 'general-logs', key: 'generalLogs' },
         ];
 
         if (!guildData.logs) guildData.logs = {};
@@ -156,7 +157,7 @@ module.exports = {
         }
 
         await guildData.save();
-        await msg0.edit({ embeds: [successEmbed('✅ Logs configurés', `Catégorie **${category?.name || 'logs'}** créée avec 6 salons :\n• raid-logs\n• mod-logs\n• msg-logs\n• rôle-logs\n• voice-logs\n• boost-logs`)] });
+        await msg0.edit({ embeds: [successEmbed('✅ Logs configurés', `Catégorie **${category?.name || 'logs'}** configurée avec 7 salons :\n• raid-logs\n• mod-logs\n• msg-logs\n• rôle-logs\n• voice-logs\n• boost-logs\n• general-logs (reçoit tout)`)] });
         return;
       }
 
@@ -166,7 +167,8 @@ module.exports = {
       case 'msglogs':
       case 'rolelogs':
       case 'voicelogs':
-      case 'boostlogs': {
+      case 'boostlogs':
+      case 'generallogs': {
         const channel = message.mentions.channels.first();
         if (!channel?.isTextBased()) {
           return message.reply({ embeds: [errorEmbed('Erreur', `Mentionne le salon à utiliser : \`+setup ${module} #salon\``)] });
@@ -179,6 +181,7 @@ module.exports = {
           rolelogs: 'roleLogs',
           voicelogs: 'voiceLogs',
           boostlogs: 'boostLogs',
+          generallogs: 'generalLogs',
         };
 
         guildData.logs ||= {};

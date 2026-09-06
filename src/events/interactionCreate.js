@@ -3,7 +3,7 @@ const Guild = require('../models/Guild');
 const Ticket = require('../models/Ticket');
 const Giveaway = require('../models/Giveaway');
 const User = require('../models/User');
-const { findLogChannel } = require('../utils/logChannel');
+const { findLogChannel, findLogChannels, sendToLogChannels } = require('../utils/logChannel');
 
 module.exports = {
   name: 'interactionCreate',
@@ -194,12 +194,13 @@ async function createTicket(interaction, category, client) {
 
   await interaction.editReply({ content: `✅ Ticket créé : ${ticketChannel}` });
 
-  const logChannel = findLogChannel(
+  const logChannels = findLogChannels(
     interaction.guild,
     guildData.tickets.logChannelId,
-    ['ticket-logs', 'tickets-logs']
+    ['ticket-logs', 'tickets-logs'],
+    guildData?.logs?.generalLogs
   );
-  if (logChannel) {
+  if (logChannels.length) {
     const logEmbed = new EmbedBuilder()
       .setColor('#57F287')
       .setTitle('🎫 Ticket ouvert')
@@ -211,9 +212,7 @@ async function createTicket(interaction, category, client) {
       .setFooter({ text: `Ticket #${String(ticketId).padStart(4, '0')}` })
       .setTimestamp();
 
-    await logChannel.send({ embeds: [logEmbed] }).catch(error => {
-      console.error(`❌ Envoi ticket-logs impossible: ${error.message}`);
-    });
+    await sendToLogChannels(logChannels, { embeds: [logEmbed] }, 'ticket-logs');
   }
 
 }
@@ -255,12 +254,13 @@ async function handleTicketClose(interaction, client) {
   await ticket.save();
 
   const guildData = await Guild.findOne({ guildId: interaction.guild.id });
-  const logChannel = findLogChannel(
+  const logChannels = findLogChannels(
     interaction.guild,
     guildData?.tickets?.logChannelId,
-    ['ticket-logs', 'tickets-logs']
+    ['ticket-logs', 'tickets-logs'],
+    guildData?.logs?.generalLogs
   );
-  if (logChannel) {
+  if (logChannels.length) {
     const logEmbed = new EmbedBuilder()
       .setColor('#ED4245')
       .setTitle('🔒 Ticket fermé')
@@ -273,9 +273,7 @@ async function handleTicketClose(interaction, client) {
       .setFooter({ text: `Ticket #${String(ticket.ticketId).padStart(4, '0')}` })
       .setTimestamp();
 
-    await logChannel.send({ embeds: [logEmbed] }).catch(error => {
-      console.error(`❌ Envoi ticket-logs impossible: ${error.message}`);
-    });
+    await sendToLogChannels(logChannels, { embeds: [logEmbed] }, 'ticket-logs');
   }
 
   const embed = new EmbedBuilder()

@@ -180,6 +180,7 @@ const guildDefault = {
     roleLogs: null,
     voiceLogs: null,
     boostLogs: null,
+    generalLogs: null,
   },
   tickets:  { enabled: false, categoryId: null, logChannelId: null, supportRoleId: null },
   suggestions: { enabled: false, channelId: null },

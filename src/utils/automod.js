@@ -1,6 +1,6 @@
 const { PermissionFlagsBits } = require('discord.js');
 const Guild = require('../models/Guild');
-const { findLogChannel } = require('./logChannel');
+const { findLogChannels, sendToLogChannels } = require('./logChannel');
 const { modLogEmbed } = require('./embed');
 
 // Mots interdits par défaut (à personnaliser)
@@ -130,14 +130,19 @@ async function handleAntiAlt(member) {
 
 // ─── Envoi log de modération ──────────────────────
 async function sendModLog(guild, guildData, action, moderator, target, reason) {
-  const logChannel = findLogChannel(
+  const logChannels = findLogChannels(
     guild,
     guildData?.logs?.modLogs || guildData?.logs?.channelId,
-    ['mod-logs', 'moderation-logs']
+    ['mod-logs', 'moderation-logs'],
+    guildData?.logs?.generalLogs
   );
-  if (!logChannel) return;
+  if (!logChannels.length) return;
 
-  await logChannel.send({ embeds: [modLogEmbed(action, moderator, target, reason)] }).catch(() => {});
+  await sendToLogChannels(
+    logChannels,
+    { embeds: [modLogEmbed(action, moderator, target, reason)] },
+    'mod-logs'
+  );
 }
 
 module.exports = { handleAntiSpam, handleAntiLink, handleAntiInsult, handleAntiMention, handleAntiRaid, handleAntiAlt, sendModLog };

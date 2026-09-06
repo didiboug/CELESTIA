@@ -1,6 +1,6 @@
 const { EmbedBuilder, AuditLogEvent } = require('discord.js');
 const Guild = require('../models/Guild');
-const { findLogChannel } = require('../utils/logChannel');
+const { findLogChannels, sendToLogChannels } = require('../utils/logChannel');
 
 module.exports = {
   name: 'guildMemberUpdate',
@@ -10,15 +10,16 @@ module.exports = {
     const guildData = await Guild.findOne({ guildId: newMember.guild.id }).catch(() => null);
 
     // ── BOOST LOGS ───────────────────────────────────
-    const boostChannel = findLogChannel(
+    const boostChannels = findLogChannels(
       newMember.guild,
       guildData?.logs?.boostLogs,
-      ['boost-logs']
+      ['boost-logs'],
+      guildData?.logs?.generalLogs
     );
     const wasBoost = oldMember.premiumSince === null && newMember.premiumSince !== null;
     const lostBoost = oldMember.premiumSince !== null && newMember.premiumSince === null;
 
-    if (boostChannel && (wasBoost || lostBoost)) {
+    if (boostChannels.length && (wasBoost || lostBoost)) {
         const embed = new EmbedBuilder()
           .setColor(wasBoost ? '#FF73FA' : '#747F8D')
           .setTitle(wasBoost ? '🚀 Nouveau boost !' : '💨 Boost retiré')
@@ -27,16 +28,17 @@ module.exports = {
             : `**${newMember.user.tag}** a retiré son boost.`)
           .setThumbnail(newMember.user.displayAvatarURL({ dynamic: true }))
           .setTimestamp();
-        boostChannel.send({ embeds: [embed] }).catch(() => {});
+        await sendToLogChannels(boostChannels, { embeds: [embed] }, 'boost-logs');
     }
 
     // ── RÔLE LOGS ────────────────────────────────────
-    const roleChannel = findLogChannel(
+    const roleChannels = findLogChannels(
       newMember.guild,
       guildData?.logs?.roleLogs,
-      ['rôle-logs', 'role-logs']
+      ['rôle-logs', 'role-logs'],
+      guildData?.logs?.generalLogs
     );
-    if (!roleChannel) return;
+    if (!roleChannels.length) return;
 
     const oldRoles = oldMember.roles.cache;
     const newRoles = newMember.roles.cache;
@@ -69,6 +71,6 @@ module.exports = {
       .setFooter({ text: `ID membre : ${newMember.id}` })
       .setTimestamp();
 
-    roleChannel.send({ embeds: [embed] }).catch(() => {});
+    await sendToLogChannels(roleChannels, { embeds: [embed] }, 'role-logs');
   },
 };

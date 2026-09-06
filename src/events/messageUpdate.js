@@ -1,6 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const Guild = require('../models/Guild');
-const { findLogChannel } = require('../utils/logChannel');
+const { findLogChannels, sendToLogChannels } = require('../utils/logChannel');
 
 module.exports = {
   name: 'messageUpdate',
@@ -11,12 +11,13 @@ module.exports = {
     if (oldMessage.content === newMessage.content) return; // Ignorer les embeds ajoutés
 
     const guildData = await Guild.findOne({ guildId: newMessage.guild.id }).catch(() => null);
-    const logChannel = findLogChannel(
+    const logChannels = findLogChannels(
       newMessage.guild,
       guildData?.logs?.msgLogs,
-      ['msg-logs', 'message-logs']
+      ['msg-logs', 'message-logs'],
+      guildData?.logs?.generalLogs
     );
-    if (!logChannel) return;
+    if (!logChannels.length) return;
 
     const embed = new EmbedBuilder()
       .setColor('#FEE75C')
@@ -33,6 +34,6 @@ module.exports = {
       .setFooter({ text: `ID message : ${newMessage.id}` })
       .setTimestamp();
 
-    logChannel.send({ embeds: [embed] }).catch(() => {});
+    await sendToLogChannels(logChannels, { embeds: [embed] }, 'msg-logs');
   },
 };
