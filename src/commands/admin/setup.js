@@ -201,11 +201,12 @@ module.exports = {
         }
 
         guildData.tickets ||= {};
+        guildData.tickets.enabled = true;
         guildData.tickets.logChannelId = channel.id;
         await guildData.save();
 
         return message.reply({
-          embeds: [successEmbed('Logs tickets configurés', `Les ouvertures et fermetures de tickets seront envoyées dans ${channel}.`)],
+          embeds: [successEmbed('Tickets activés', `Le système de tickets est activé.\nLes ouvertures et fermetures seront envoyées dans ${channel}.`)],
         });
       }
 
