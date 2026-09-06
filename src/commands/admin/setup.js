@@ -96,7 +96,8 @@ module.exports = {
           type: ChannelType.GuildCategory,
           permissionOverwrites: [
             { id: message.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-            { id: message.guild.members.me.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
+            { id: message.guild.members.me.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks, PermissionFlagsBits.ReadMessageHistory] },
+            { id: message.author.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory] },
           ],
         }).catch(() => null);
 
@@ -116,16 +117,42 @@ module.exports = {
         }
 
         for (const { name, key } of logChannels) {
-          const ch = await message.guild.channels.create({
-            name,
-            type: ChannelType.GuildText,
-            parent: category?.id || null,
-            permissionOverwrites: [
-              { id: message.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-              { id: message.guild.members.me.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
-            ],
-          }).catch(() => null);
-          if (ch) guildData.logs[key] = ch.id;
+          let ch = message.guild.channels.cache.find(channel =>
+            channel.type === ChannelType.GuildText &&
+            channel.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() ===
+              name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+          );
+
+          if (!ch) {
+            ch = await message.guild.channels.create({
+              name,
+              type: ChannelType.GuildText,
+              parent: category?.id || null,
+              permissionOverwrites: [
+                { id: message.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+                { id: message.guild.members.me.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks, PermissionFlagsBits.ReadMessageHistory] },
+                { id: message.author.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory] },
+              ],
+            }).catch(() => null);
+          } else {
+            await ch.permissionOverwrites.edit(message.guild.members.me, {
+              ViewChannel: true,
+              SendMessages: true,
+              EmbedLinks: true,
+              ReadMessageHistory: true,
+            }).catch(() => {});
+            await ch.permissionOverwrites.edit(message.author, {
+              ViewChannel: true,
+              ReadMessageHistory: true,
+            }).catch(() => {});
+          }
+
+          if (ch) {
+            guildData.logs[key] = ch.id;
+            await ch.send(`✅ **${name} fonctionne.** Configuration effectuée par ${message.author}.`).catch(error => {
+              console.error(`❌ Test ${name} impossible: ${error.message}`);
+            });
+          }
         }
 
         await guildData.save();
@@ -158,6 +185,9 @@ module.exports = {
         guildData.logs.enabled = true;
         guildData.logs[keys[module]] = channel.id;
         await guildData.save();
+        await channel.send(`✅ **${module} fonctionne.** Configuration effectuée par ${message.author}.`).catch(error => {
+          console.error(`❌ Test ${module} impossible: ${error.message}`);
+        });
 
         return message.reply({
           embeds: [successEmbed('Salon de logs configuré', `Les événements **${module}** seront envoyés dans ${channel}.`)],
