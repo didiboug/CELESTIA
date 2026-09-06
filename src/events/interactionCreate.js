@@ -153,7 +153,7 @@ async function createTicket(interaction, category, client) {
     type: 0, // GUILD_TEXT
     parent: parentId || null,
     permissionOverwrites,
-    topic: `Ticket de ${interaction.user.tag} | Catégorie: ${category}`,
+    topic: `Ticket de ${interaction.user.tag} (${interaction.user.id}) | Catégorie: ${category}`,
   }).catch(() => null);
 
   if (!ticketChannel) {
@@ -222,7 +222,30 @@ async function createTicket(interaction, category, client) {
 async function handleTicketClose(interaction, client) {
   await interaction.deferReply();
 
-  const ticket = await Ticket.findOne({ channelId: interaction.channel.id });
+  let ticket = await Ticket.findOne({ channelId: interaction.channel.id });
+
+  // Récupération automatique si NeDB a été réinitialisé pendant un redéploiement.
+  if (!ticket && interaction.channel.name.startsWith('ticket-')) {
+    const topic = interaction.channel.topic || '';
+    const topicUserId = topic.match(/\((\d{17,20})\)/)?.[1];
+    const ownerOverwrite = interaction.channel.permissionOverwrites.cache.find(
+      overwrite => overwrite.type === 1 && overwrite.id !== interaction.client.user.id
+    );
+    const userId = topicUserId || ownerOverwrite?.id || interaction.user.id;
+    const ticketId = Number(interaction.channel.name.match(/ticket-(\d+)/)?.[1]) || 0;
+    const category = topic.match(/Catégorie:\s*(.+)$/i)?.[1] || 'Non précisée';
+
+    ticket = await Ticket.create({
+      guildId: interaction.guild.id,
+      userId,
+      channelId: interaction.channel.id,
+      ticketId,
+      category,
+      status: 'open',
+      recovered: true,
+    });
+  }
+
   if (!ticket) return interaction.editReply({ content: '❌ Ce canal n\'est pas un ticket.' });
   if (ticket.status === 'closed') return interaction.editReply({ content: '❌ Ce ticket est déjà fermé.' });
 
