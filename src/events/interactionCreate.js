@@ -134,7 +134,11 @@ async function createTicket(interaction, category, client) {
   // Créer le channel ticket
   const channelName = `ticket-${String(ticketId).padStart(4, '0')}`;
   const parentId = guildData.tickets.categoryId;
-  const supportRoleId = guildData.tickets.supportRoleId;
+  const supportRoleId = guildData.tickets.supportRoleId ||
+    interaction.guild.roles.cache.find(role =>
+      ['staff', 'support', 'modération', 'moderation', 'modérateur', 'moderator']
+        .includes(role.name.toLowerCase())
+    )?.id;
 
   const permissionOverwrites = [
     { id: interaction.guild.id, deny: ['ViewChannel'] },

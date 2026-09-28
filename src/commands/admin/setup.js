@@ -1,6 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 const { successEmbed, errorEmbed, infoEmbed } = require('../../utils/embed');
 const Guild = require('../../models/Guild');
+const Ticket = require('../../models/Ticket');
 
 module.exports = {
   name: 'setup',
@@ -210,6 +211,45 @@ module.exports = {
 
         return message.reply({
           embeds: [successEmbed('Tickets activés', `Le système de tickets est activé.\nLes ouvertures et fermetures seront envoyées dans ${channel}.`)],
+        });
+      }
+
+      case 'supportrole':
+      case 'ticketrole': {
+        const role = message.mentions.roles.first();
+        if (!role) {
+          return message.reply({
+            embeds: [errorEmbed('Erreur', 'Mentionne le rôle du staff : `+setup supportrole @Staff`')],
+          });
+        }
+
+        guildData.tickets ||= {};
+        guildData.tickets.enabled = true;
+        guildData.tickets.supportRoleId = role.id;
+        await guildData.save();
+
+        const openTickets = await Ticket.find({
+          guildId: message.guild.id,
+          status: 'open',
+        }).catch(() => []);
+
+        await Promise.all(openTickets.map(async ticket => {
+          const channel = message.guild.channels.cache.get(ticket.channelId);
+          if (!channel) return;
+          await channel.permissionOverwrites.edit(role, {
+            ViewChannel: true,
+            SendMessages: true,
+            ReadMessageHistory: true,
+            ManageMessages: true,
+          }).catch(() => {});
+        }));
+
+        return message.reply({
+          embeds: [successEmbed(
+            '✅ Staff des tickets configuré',
+            `Le rôle ${role} peut maintenant voir et gérer les nouveaux tickets.\n` +
+            `Les tickets déjà ouverts ont également été mis à jour.`
+          )],
         });
       }
 
